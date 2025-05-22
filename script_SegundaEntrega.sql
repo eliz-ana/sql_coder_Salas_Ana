@@ -170,7 +170,9 @@ BEGIN
         JOIN field_of_study f ON s.field_id = f.field_id
         JOIN career_outcome c ON s.outcome_id = c.outcome_id
         GROUP BY 
-            f.field_name;
+            f.field_name
+		ORDER BY
+             AVG(c.career_satisfaction) DESC;
     ELSE
         SELECT 
             f.field_name AS Field,
@@ -195,41 +197,37 @@ CALL Get_Field_Statistics('Arts');
 
 CALL Get_Field_Statistics(NULL);
 
---  SP life career balance ------------------
+--  SP compara la satisfaccion y el balance vida-trabajo ------------------
 
 DELIMITER //
 
-CREATE PROCEDURE sp_life_career_balance(
-    IN min_satisfaction INT,
-    IN max_work_life_balance INT
-)
+CREATE PROCEDURE sp_life_career_balance()
 BEGIN
     SELECT 
-        s.student_id,
-        s.Age,
-        f.field_name,
-        c.career_satisfaction,
-        c.work_life_balance
+        f.field_name AS Career,
+        COUNT(s.student_id) AS Total_Students,
+        AVG(c.career_satisfaction) AS Avg_Satisfaction,
+        AVG(c.work_life_balance) AS Avg_Work_Life_Balance
     FROM 
         student s
     JOIN 
         career_outcome c ON s.outcome_id = c.outcome_id
     JOIN 
         field_of_study f ON s.field_id = f.field_id
-    WHERE 
-        c.career_satisfaction >= min_satisfaction AND
-        c.work_life_balance <= max_work_life_balance
+    GROUP BY 
+        f.field_name
     ORDER BY 
-        c.career_satisfaction DESC;
+        Avg_Satisfaction DESC;
 END //
 
 DELIMITER ;
+
 --  llamada del procedure con parametros--------------
 
- CALL sp_life_career_balance(8,3);
+ CALL sp_life_career_balance();
  
  -- --------------------------------------------------triggers-------------------------------------------------------------------
- -- tabla para registro de INSERT en student
+ -- tabla para registro del trigger ( student_log)
  
  CREATE TABLE student_log (
     log_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -262,7 +260,7 @@ VALUES (
 
 -- trigger para guardar updates---
 
--- tabla para guardar los updates--
+-- tabla para guardar los logs del trigger(update_log) --
 CREATE TABLE update_log (
     log_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(50),
@@ -273,7 +271,6 @@ CREATE TABLE update_log (
     new_values TEXT
 );
 -- trigger de log update--
-DROP TRIGGER IF EXISTS after_student_update;
 
 
 DELIMITER //
@@ -324,6 +321,9 @@ BEGIN
 END //
 
 DELIMITER ;
+
+
+
 
 
 
